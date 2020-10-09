@@ -1,5 +1,7 @@
 #!/usr/bin/env julia
 
+
+#modules in use
 using GenomicFeatures
 using BioAlignments
 using DataStructures
@@ -43,7 +45,11 @@ bam_index_3 = parsed_args["bam_index_3"]
 sample_name_3 = parsed_args["sample_name_3"]
 output_csv = parsed_args["output"]
 
+
+#function to create a datafram with gene names and counts for one sample
 function gene_count_df(gff_file::String, sorted_bam::String, bam_index::String, sample_name::String)
+
+    #readers
     gff_reader = open(GFF3.Reader, gff_file)
     bam_reader = open(BAM.Reader, sorted_bam, index = bam_index)
 
@@ -106,8 +112,12 @@ function gene_count_df(gff_file::String, sorted_bam::String, bam_index::String, 
     #groupby genes
     gdf1a = groupby(df1a, :genes)
 
+
+    #average the counts for duplicate genes
     gene_count_df = combine(gdf1a, :count => mean)
 
+
+    #name the columns
     column_names = ["Gene", sample_name]
 
     #convert column names to symbols
@@ -123,11 +133,14 @@ function gene_count_df(gff_file::String, sorted_bam::String, bam_index::String, 
     return gene_count_df
 end
 
-
+#create dataframe for each sample
 Sample1_df = gene_count_df(gff_file, sorted_bam_1, bam_index_1, sample_name_1)
 Sample2_df = gene_count_df(gff_file, sorted_bam_2, bam_index_2, sample_name_2)
 Sample3_df = gene_count_df(gff_file, sorted_bam_3, bam_index_3, sample_name_3)
 
+
+#join three dataframes on gene name
 Final_df = join(Sample1_df, Sample2_df, Sample3_df, on = :Gene, kind = :outer)
 
+#save to csv file
 CSV.write(output_csv, Final_df)
