@@ -2,6 +2,7 @@
 
 
 #modules in use
+println("Loading packages...")
 using GenomicFeatures
 using BioAlignments
 using DataStructures
@@ -14,6 +15,7 @@ using ArgParse
 
 
 #Parse arguments
+println("parsing arguments...")
 s = ArgParseSettings()
 @add_arg_table! s begin
     "--gff"
@@ -47,6 +49,7 @@ output_csv = parsed_args["output"]
 
 
 #function to create a datafram with gene names and counts for one sample
+println("creating function...")
 function gene_count_df(gff_file::String, sorted_bam::String, bam_index::String, sample_name::String)
 
     #readers
@@ -134,13 +137,23 @@ function gene_count_df(gff_file::String, sorted_bam::String, bam_index::String, 
 end
 
 #create dataframe for each sample
+println("evaluating first sample...")
 Sample1_df = gene_count_df(gff_file, sorted_bam_1, bam_index_1, sample_name_1)
+
+println("evaluating second sample...")
 Sample2_df = gene_count_df(gff_file, sorted_bam_2, bam_index_2, sample_name_2)
+
+println("evaluating third sample...")
 Sample3_df = gene_count_df(gff_file, sorted_bam_3, bam_index_3, sample_name_3)
 
 
 #join three dataframes on gene name
+println("joining dataframes...")
 Final_df = join(Sample1_df, Sample2_df, Sample3_df, on = :Gene, kind = :outer)
+
+#print out dataframe (takes a long time)
+#println(Final_df)
 
 #save to csv file
 CSV.write(output_csv, Final_df)
+println("read count dataframe saved as csv")
