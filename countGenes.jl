@@ -15,6 +15,7 @@
 #Pkg.add("CSV")
 
 #Import packages
+println("Importing packages...")
 using BioAlignments
 using GenomicFeatures
 using DataStructures
@@ -24,59 +25,68 @@ using GFF3
 using CSV
 
 #Retrieve inputs
-inPath=ARGS[1]
-outPath=ARGS[2]
-inputGFF=inPath * /ref/ * ARGS[3]
-bamList=Array{String}(undef, length(4:length(ARGS)))
-baiList=Array{String}(undef, length(4:length(ARGS)))
-for i in 4:length(ARGS)
-    index=i-3
-    bamList[index]=inPath * "/results/bam/" * ARGS[i] * ".bam"
-    baiList[index]=inPath * "/results/bam/" * ARGS[i] * ".bai"
-end
-
-#Retrieve bam and gff files
-gffReader=open(GFF3.Reader, inputGFF)
-for file in bamList
-    bamReader=open(BAM.Reader, file)
+outPath=ARGS[1]
+gffPath=ARGS[2]
+samplePath=ARGS[3]
+gffFile=gffPath * "/" * ARGS[4]
+bamList=Array{String}(undef, length(5:length(ARGS)))
+baiList=Array{String}(undef, length(5:length(ARGS)))
+for i in 5:length(ARGS)
+    index=i-4
+    bamList[index]=samplePath * "/" * ARGS[i] * "_sorted.bam"
+    baiList[index]=samplePath * "/" * ARGS[i] * "_sorted.bam.bai"
 end
 
 #Count total mRNAs from gff
+println("Counting mRNAs from gff...")
+gffReader=open(GFF3.Reader, gffFile)
 total=0
 for record in gffReader
     if(GFF3.featuretype(record) == "mRNA")
-        total=total+1
+        #Count total mRNAs
+        global total=total+1
     end
 end
 
 #Prepare to count mRNAs from bam files
-rows=length(total)+1
-cols=length(bamList+1)
-counts=zeros(rows,cols)
-rowIndex=2
-colIndex=2
+rows=total+1
+cols=length(bamList)+1
+counts=Array{String}(undef, rows, cols)
 counts[1,1]="mRNA"
 #Count features for each bam file
 for sample in 1:length(bamList)
+    #Add sample to matrix header
+    colIndex=sample+1
+    global counts[1,colIndex]=ARGS[colIndex-1]
+    #Output sample to status message
+    outMsg="Counting features for sample " * ARGS[sample] * "..."
+    println(outMsg)
+    #Retrieve input files
     bamReader=open(BAM.Reader, bamList[sample], index=baiList[sample])
+    gffReader=open(GFF3.Reader, gffFile)
+    #(Re)set row counter
+    rowIndex=2
+    #Loop over features
     for feature in gffReader
         if(GFF3.featuretype(feature) == "mRNA")
+            #Count current feature
             i=0
             for record in eachoverlap(bamReader, feature)
                 i=i+1
             end
-            #Add feature and counts to matrix
-            counts[rowIndex,1]=feature
-            counts[rowIndex,colIndex]=i
+            #Add features to matrix by first sample
+            if(colIndex == 2)
+                tag="mRNA" * rowIndex
+                global counts[rowIndex,1]=tag
+            end
+            #Add counts to matrix
+            global counts[rowIndex,colIndex]=string(i)
             #Update row index by feature
             rowIndex=rowIndex+1
         end
     end
-    #Add sample to matrix header
-    counts[1,colIndex]=ARGS[colIndex+2]
-    #Update column index by sample
-    colIndex=colIndex+1
 end
 
 #Write counts table to csv
-CSV.write(outPath, DataFrame(counts), writeheader=false)
+println("Writing results to file...")
+CSV.write(outPath, DataFrame(counts), header=false)
