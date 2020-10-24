@@ -57,9 +57,9 @@ counts[1,1]="mRNA"
 for sample in 1:length(bamList)
     #Add sample to matrix header
     colIndex=sample+1
-    global counts[1,colIndex]=ARGS[colIndex-1]
+    global counts[1,colIndex]=ARGS[sample+4]
     #Output sample to status message
-    outMsg="Counting features for sample " * ARGS[sample] * "..."
+    outMsg="Counting features for sample " * ARGS[sample+4] * "..."
     println(outMsg)
     #Retrieve input files
     bamReader=open(BAM.Reader, bamList[sample], index=baiList[sample])
@@ -76,7 +76,8 @@ for sample in 1:length(bamList)
             end
             #Add features to matrix by first sample
             if(colIndex == 2)
-                tag="mRNA" * rowIndex
+                tagNum=rowIndex-1
+                tag="mRNA" * string(tagNum) 
                 global counts[rowIndex,1]=tag
             end
             #Add counts to matrix
